@@ -32,6 +32,12 @@ if [ ! -f "$PUBLIC_WALLPAPER_FILE" ]; then
     exit 1
 fi
 
+# Set permission biar bisa diakses browser
+chmod 644 "$PUBLIC_WALLPAPER_FILE"
+chown -R www-data:www-data "$PUBLIC_WALLPAPER_DIR" 2>/dev/null || chown -R nginx:nginx "$PUBLIC_WALLPAPER_DIR" 2>/dev/null || chown -R apache:apache "$PUBLIC_WALLPAPER_DIR" 2>/dev/null
+
+echo "✅ Wallpaper tersimpan di: $PUBLIC_WALLPAPER_FILE"
+
 # -------------------------------
 # Inject Blade + CSS + JS
 # -------------------------------
@@ -49,6 +55,19 @@ cat > "$TARGET_FILE" << 'EOF'
       body {
         background: url('/rendzz/bg.jpg') no-repeat center center fixed !important;
         background-size: cover !important;
+      }
+      
+      /* Pastikan konten tetap terbaca */
+      .content-wrapper, .main-sidebar, .card {
+        background-color: rgba(255, 255, 255, 0.9) !important;
+        backdrop-filter: blur(5px);
+      }
+      
+      .dark-mode .content-wrapper, 
+      .dark-mode .main-sidebar, 
+      .dark-mode .card {
+        background-color: rgba(31, 41, 55, 0.9) !important;
+        backdrop-filter: blur(5px);
       }
     </style>
 
@@ -91,5 +110,12 @@ cat > "$TARGET_FILE" << 'EOF'
 @endsection
 EOF
 
+# Clear cache biar blade langsung update
+cd "$PTERO_DIR"
+php artisan view:clear
+php artisan cache:clear
+
 echo "✅ Blade + Wallpaper + Greeting JS berhasil di-inject!"
+echo "📁 Wallpaper path: /rendzz/bg.jpg"
+echo "🔍 Cek akses: curl -I http://$(hostname -I | awk '{print $1}')/rendzz/bg.jpg"
 echo "🎉 Semua update selesai. Refresh browser (CTRL+SHIFT+R) untuk melihat hasil."

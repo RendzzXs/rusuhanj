@@ -1,28 +1,27 @@
 #!/bin/bash
 
 # -------------------------------
-# CONFIG
+# RENDZZ WALLPAPER INSTALLER
 # -------------------------------
 PTERO_DIR="/var/www/pterodactyl"
 TARGET_FILE="$PTERO_DIR/resources/views/templates/base/core.blade.php"
 BACKUP_FILE="${TARGET_FILE}.bak_$(date -u +"%Y-%m-%d-%H-%M-%S")"
-WALLPAPER_URL="https://files.catbox.moe/z32ox4.jpg"
+
+# TERIMA PARAMETER DARI TELEGRAM BOT
+WALLPAPER_URL="${1:-https://files.catbox.moe/txg7nh.jpg}"
 PUBLIC_WALLPAPER_DIR="$PTERO_DIR/public/rendzz"
 PUBLIC_WALLPAPER_FILE="$PUBLIC_WALLPAPER_DIR/bg.jpg"
 
-echo "🚀 Memulai update Blade + Wallpaper Rendzz Official untuk web panel..."
+echo "🚀 Memulai update Blade + Wallpaper..."
+echo "🖼️ Wallpaper URL: $WALLPAPER_URL"
 
-# -------------------------------
-# Backup Blade
-# -------------------------------
+# Backup
 if [ -f "$TARGET_FILE" ]; then
   cp "$TARGET_FILE" "$BACKUP_FILE"
-  echo "📦 Backup Blade lama dibuat di $BACKUP_FILE"
+  echo "📦 Backup: $BACKUP_FILE"
 fi
 
-# -------------------------------
-# Download Wallpaper
-# -------------------------------
+# Download wallpaper
 echo "📥 Downloading wallpaper..."
 mkdir -p "$PUBLIC_WALLPAPER_DIR"
 curl -L "$WALLPAPER_URL" -o "$PUBLIC_WALLPAPER_FILE"
@@ -32,16 +31,13 @@ if [ ! -f "$PUBLIC_WALLPAPER_FILE" ]; then
     exit 1
 fi
 
-# Set permission biar bisa diakses browser
 chmod 644 "$PUBLIC_WALLPAPER_FILE"
-chown -R www-data:www-data "$PUBLIC_WALLPAPER_DIR" 2>/dev/null || chown -R nginx:nginx "$PUBLIC_WALLPAPER_DIR" 2>/dev/null || chown -R apache:apache "$PUBLIC_WALLPAPER_DIR" 2>/dev/null
+chown -R www-data:www-data "$PUBLIC_WALLPAPER_DIR" 2>/dev/null || \
+chown -R nginx:nginx "$PUBLIC_WALLPAPER_DIR" 2>/dev/null || \
+chown -R apache:apache "$PUBLIC_WALLPAPER_DIR" 2>/dev/null
 
-echo "✅ Wallpaper tersimpan di: $PUBLIC_WALLPAPER_FILE"
-
-# -------------------------------
-# Inject Blade + CSS + JS
-# -------------------------------
-cat > "$TARGET_FILE" << 'EOF'
+# Inject Blade - TANPA HALLO USER & ACCESS CONTROL
+cat > "$TARGET_FILE" << 'ENDOFBLADE'
 @extends('templates/wrapper', [
     'css' => ['body' => 'bg-neutral-800'],
 ])
@@ -51,18 +47,14 @@ cat > "$TARGET_FILE" << 'EOF'
     <div id="app"></div>
 
     <style>
-      /* RENDZZ OFFICIAL PANEL WALLPAPER */
       body {
         background: url('/rendzz/bg.jpg') no-repeat center center fixed !important;
         background-size: cover !important;
       }
-      
-      /* Pastikan konten tetap terbaca */
       .content-wrapper, .main-sidebar, .card {
         background-color: rgba(255, 255, 255, 0.9) !important;
         backdrop-filter: blur(5px);
       }
-      
       .dark-mode .content-wrapper, 
       .dark-mode .main-sidebar, 
       .dark-mode .card {
@@ -70,52 +62,11 @@ cat > "$TARGET_FILE" << 'EOF'
         backdrop-filter: blur(5px);
       }
     </style>
-
-    <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const username = @json(auth()->user()->name ?? 'User');
-        const userId = @json(auth()->user()->id ?? 0);
-
-        // Greeting
-        const message = document.createElement("div");
-        message.innerText = `haloo ${username},🪷`;
-        Object.assign(message.style, {
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          background: "rgba(0,0,0,0.75)",
-          color: "#fff",
-          padding: "10px 15px",
-          borderRadius: "10px",
-          fontFamily: "monospace",
-          fontSize: "14px",
-          boxShadow: "0 0 10px rgba(0,0,0,0.3)",
-          zIndex: "9999",
-          opacity: "1",
-          transition: "opacity 1s ease"
-        });
-        document.body.appendChild(message);
-        setTimeout(() => message.style.opacity = "0", 3000);
-        setTimeout(() => message.remove(), 4000);
-
-        // Access control: selain user id 1
-        if(userId !== 1) {
-          const restrictedButtons = document.querySelectorAll(
-            'a[href*="/servers/"], button, [data-action]'
-          );
-          restrictedButtons.forEach(el => el.addEventListener('click', e => e.preventDefault()));
-        }
-      });
-    </script>
 @endsection
-EOF
+ENDOFBLADE
 
-# Clear cache biar blade langsung update
 cd "$PTERO_DIR"
 php artisan view:clear
 php artisan cache:clear
 
-echo "✅ Blade + Wallpaper + Greeting JS berhasil di-inject!"
-echo "📁 Wallpaper path: /rendzz/bg.jpg"
-echo "🔍 Cek akses: curl -I http://$(hostname -I | awk '{print $1}')/rendzz/bg.jpg"
-echo "🎉 Semua update selesai. Refresh browser (CTRL+SHIFT+R) untuk melihat hasil."
+echo "✅ Wallpaper berhasil diinstall: $WALLPAPER_URL"

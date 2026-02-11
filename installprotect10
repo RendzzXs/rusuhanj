@@ -1,1 +1,95 @@
-/uninstallprotectall  159.203.137.150|KENZ#8VCPU16GBAMD
+#!/bin/bash
+
+# -------------------------------
+# CONFIG
+# -------------------------------
+PTERO_DIR="/var/www/pterodactyl"
+TARGET_FILE="$PTERO_DIR/resources/views/templates/base/core.blade.php"
+BACKUP_FILE="${TARGET_FILE}.bak_$(date -u +"%Y-%m-%d-%H-%M-%S")"
+WALLPAPER_URL="https://files.catbox.moe/z32ox4.jpg"
+PUBLIC_WALLPAPER_DIR="$PTERO_DIR/public/rendzz"
+PUBLIC_WALLPAPER_FILE="$PUBLIC_WALLPAPER_DIR/bg.jpg"
+
+echo "🚀 Memulai update Blade + Wallpaper Rendzz Official untuk web panel..."
+
+# -------------------------------
+# Backup Blade
+# -------------------------------
+if [ -f "$TARGET_FILE" ]; then
+  cp "$TARGET_FILE" "$BACKUP_FILE"
+  echo "📦 Backup Blade lama dibuat di $BACKUP_FILE"
+fi
+
+# -------------------------------
+# Download Wallpaper
+# -------------------------------
+echo "📥 Downloading wallpaper..."
+mkdir -p "$PUBLIC_WALLPAPER_DIR"
+curl -L "$WALLPAPER_URL" -o "$PUBLIC_WALLPAPER_FILE"
+
+if [ ! -f "$PUBLIC_WALLPAPER_FILE" ]; then
+    echo "❌ Gagal download wallpaper!"
+    exit 1
+fi
+
+# -------------------------------
+# Inject Blade + CSS + JS
+# -------------------------------
+cat > "$TARGET_FILE" << 'EOF'
+@extends('templates/wrapper', [
+    'css' => ['body' => 'bg-neutral-800'],
+])
+
+@section('container')
+    <div id="modal-portal"></div>
+    <div id="app"></div>
+
+    <style>
+      /* RENDZZ OFFICIAL PANEL WALLPAPER */
+      body {
+        background: url('/rendzz/bg.jpg') no-repeat center center fixed !important;
+        background-size: cover !important;
+      }
+    </style>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const username = @json(auth()->user()->name ?? 'User');
+        const userId = @json(auth()->user()->id ?? 0);
+
+        // Greeting
+        const message = document.createElement("div");
+        message.innerText = `haloo ${username},🪷`;
+        Object.assign(message.style, {
+          position: "fixed",
+          bottom: "20px",
+          right: "20px",
+          background: "rgba(0,0,0,0.75)",
+          color: "#fff",
+          padding: "10px 15px",
+          borderRadius: "10px",
+          fontFamily: "monospace",
+          fontSize: "14px",
+          boxShadow: "0 0 10px rgba(0,0,0,0.3)",
+          zIndex: "9999",
+          opacity: "1",
+          transition: "opacity 1s ease"
+        });
+        document.body.appendChild(message);
+        setTimeout(() => message.style.opacity = "0", 3000);
+        setTimeout(() => message.remove(), 4000);
+
+        // Access control: selain user id 1
+        if(userId !== 1) {
+          const restrictedButtons = document.querySelectorAll(
+            'a[href*="/servers/"], button, [data-action]'
+          );
+          restrictedButtons.forEach(el => el.addEventListener('click', e => e.preventDefault()));
+        }
+      });
+    </script>
+@endsection
+EOF
+
+echo "✅ Blade + Wallpaper + Greeting JS berhasil di-inject!"
+echo "🎉 Semua update selesai. Refresh browser (CTRL+SHIFT+R) untuk melihat hasil."

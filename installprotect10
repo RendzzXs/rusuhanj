@@ -1,62 +1,50 @@
 #!/bin/bash
 
 # -------------------------------
-# CONFIG
+# RENDZZ OFFICIAL - FULL CUSTOM PANEL
 # -------------------------------
 PTERO_DIR="/var/www/pterodactyl"
-TARGET_FILE="$PTERO_DIR/resources/views/templates/base/core.blade.php"
-FOOTER_FILE="$PTERO_DIR/resources/views/templates/base/footer.blade.php"
-BACKUP_FILE="${TARGET_FILE}.bak_$(date -u +"%Y-%m-%d-%H-%M-%S")"
-BACKUP_FOOTER="${FOOTER_FILE}.bak_$(date -u +"%Y-%m-%d-%H-%M-%S")"
-WALLPAPER_URL="${1:-https://files.catbox.moe/z32ox4.jpg}"
-PUBLIC_WALLPAPER_DIR="$PTERO_DIR/public/rendzz"
-PUBLIC_WALLPAPER_FILE="$PUBLIC_WALLPAPER_DIR/bg.jpg"
+WALLPAPER_URL="https://files.catbox.moe/yprqlo.jpg"
+LOGO_URL="https://files.catbox.moe/yprqlo.jpg"
 
-echo "🚀 Memulai update Blade + Wallpaper Rendzz Official untuk web panel..."
+echo "🚀 Mulai kostumisasi panel Rendzz Official..."
 
 # -------------------------------
-# Backup Blade
+# 1. BACKUP FILE PENTING
 # -------------------------------
-if [ -f "$TARGET_FILE" ]; then
-  cp "$TARGET_FILE" "$BACKUP_FILE"
-  echo "📦 Backup Blade lama dibuat di $BACKUP_FILE"
-fi
-
-if [ -f "$FOOTER_FILE" ]; then
-  cp "$FOOTER_FILE" "$BACKUP_FOOTER"
-  echo "📦 Backup Footer dibuat di $BACKUP_FOOTER"
-fi
+cp "$PTERO_DIR/resources/views/templates/base/core.blade.php" "$PTERO_DIR/core.bak" 2>/dev/null
+cp "$PTERO_DIR/resources/views/templates/base/footer.blade.php" "$PTERO_DIR/footer.bak" 2>/dev/null
+cp "$PTERO_DIR/public/logo.png" "$PTERO_DIR/logo.bak" 2>/dev/null
+cp "$PTERO_DIR/public/favicon.ico" "$PTERO_DIR/favicon.bak" 2>/dev/null
 
 # -------------------------------
-# Download Wallpaper
+# 2. WALLPAPER (URL BARU)
 # -------------------------------
-echo "📥 Downloading wallpaper..."
-mkdir -p "$PUBLIC_WALLPAPER_DIR"
-curl -L "$WALLPAPER_URL" -o "$PUBLIC_WALLPAPER_FILE"
-
-if [ ! -f "$PUBLIC_WALLPAPER_FILE" ]; then
-    echo "❌ Gagal download wallpaper!"
-    exit 1
-fi
-
-chmod 644 "$PUBLIC_WALLPAPER_FILE"
-chown -R www-data:www-data "$PUBLIC_WALLPAPER_DIR" 2>/dev/null || chown -R nginx:nginx "$PUBLIC_WALLPAPER_DIR" 2>/dev/null || chown -R apache:apache "$PUBLIC_WALLPAPER_DIR" 2>/dev/null
-
-echo "✅ Wallpaper tersimpan di: $PUBLIC_WALLPAPER_FILE"
+echo "📥 Download wallpaper..."
+mkdir -p "$PTERO_DIR/public/rendzz"
+curl -L "$WALLPAPER_URL" -o "$PTERO_DIR/public/rendzz/bg.jpg"
+chmod 644 "$PTERO_DIR/public/rendzz/bg.jpg"
 
 # -------------------------------
-# Ganti Copyright Footer
+# 3. LOGO & FAVICON (PAKE GAMBAR SAMA)
 # -------------------------------
-if [ -f "$FOOTER_FILE" ]; then
-  sed -i 's/Pterodactyl®/Rendzz Official®/g' "$FOOTER_FILE"
-  sed -i 's/© [0-9]\{4\} - [0-9]\{4\}/© 2025 - 2026/g' "$FOOTER_FILE"
-  echo "✅ Copyright diganti ke Rendzz Official® © 2025 - 2026"
-fi
+echo "🖼️ Ganti logo & favicon..."
+curl -L "$LOGO_URL" -o "$PTERO_DIR/public/logo.png"
+curl -L "$LOGO_URL" -o "$PTERO_DIR/public/favicon.ico"
+chmod 644 "$PTERO_DIR/public/logo.png" "$PTERO_DIR/public/favicon.ico"
 
 # -------------------------------
-# Inject Blade + CSS (NO GREETING, NO ACCESS CONTROL)
+# 4. GANTI COPYRIGHT FOOTER
 # -------------------------------
-cat > "$TARGET_FILE" << 'EOF'
+echo "©️ Ganti copyright footer..."
+sed -i 's/Pterodactyl®/Rendzz Official®/g' "$PTERO_DIR/resources/views/templates/base/footer.blade.php"
+sed -i 's/© [0-9]\{4\} - [0-9]\{4\}/© 2025 - 2026/g' "$PTERO_DIR/resources/views/templates/base/footer.blade.php"
+
+# -------------------------------
+# 5. INJECT WALLPAPER KE CORE (TANPA GREETING)
+# -------------------------------
+echo "🎨 Inject wallpaper ke core.blade.php..."
+cat > "$PTERO_DIR/resources/views/templates/base/core.blade.php" << 'EOF'
 @extends('templates/wrapper', [
     'css' => ['body' => 'bg-neutral-800'],
 ])
@@ -66,38 +54,52 @@ cat > "$TARGET_FILE" << 'EOF'
     <div id="app"></div>
 
     <style>
-      /* RENDZZ OFFICIAL PANEL WALLPAPER */
-      body {
-        background: url('/rendzz/bg.jpg') no-repeat center center fixed !important;
-        background-size: cover !important;
-      }
-      
-      /* Pastikan konten tetap terbaca */
-      .content-wrapper, .main-sidebar, .card {
-        background-color: rgba(255, 255, 255, 0.9) !important;
-        backdrop-filter: blur(5px);
-      }
-      
-      .dark-mode .content-wrapper, 
-      .dark-mode .main-sidebar, 
-      .dark-mode .card {
-        background-color: rgba(31, 41, 55, 0.9) !important;
-        backdrop-filter: blur(5px);
-      }
+        /* RENDZZ OFFICIAL BACKGROUND */
+        body {
+            background: url('/rendzz/bg.jpg') no-repeat center center fixed !important;
+            background-size: cover !important;
+        }
+
+        /* BIAR KONTEN KEBIACA */
+        .content-wrapper, .main-sidebar, .card {
+            background-color: rgba(255, 255, 255, 0.9) !important;
+            backdrop-filter: blur(5px);
+        }
+
+        .dark-mode .content-wrapper, 
+        .dark-mode .main-sidebar, 
+        .dark-mode .card {
+            background-color: rgba(31, 41, 55, 0.9) !important;
+            backdrop-filter: blur(5px);
+        }
     </style>
 @endsection
 EOF
 
 # -------------------------------
-# Clear cache
+# 6. GANTI TITLE PANEL
 # -------------------------------
+echo "📝 Ganti title panel..."
+sed -i 's/<title>.*<\/title>/<title>Rendzz Official Panel<\/title>/g' "$PTERO_DIR/resources/views/layouts/admin.blade.php" 2>/dev/null
+sed -i 's/<title>.*<\/title>/<title>Rendzz Official Panel<\/title>/g' "$PTERO_DIR/resources/views/layouts/auth.blade.php" 2>/dev/null
+
+# -------------------------------
+# 7. CLEAR CACHE
+# -------------------------------
+echo "🧹 Clear cache..."
 cd "$PTERO_DIR"
 php artisan view:clear
 php artisan cache:clear
 
-echo "✅ Blade + Wallpaper berhasil di-inject!"
-echo "✅ Semua ucapan (greeting) dan access control telah DIHAPUS!"
-echo "✅ Copyright footer diganti: Rendzz Official® © 2025 - 2026"
-echo "📁 Wallpaper path: /rendzz/bg.jpg"
-echo "🔍 Cek akses: curl -I http://$(hostname -I | awk '{print $1}')/rendzz/bg.jpg"
-echo "🎉 Semua update selesai. Refresh browser (CTRL+SHIFT+R) untuk melihat hasil."
+# -------------------------------
+# 8. SELESAI
+# -------------------------------
+echo ""
+echo "✅✅✅  SEMUA BERHASIL!  ✅✅✅"
+echo "=================================="
+echo "🖼️  Wallpaper : $WALLPAPER_URL"
+echo "🖼️  Logo      : $LOGO_URL"
+echo "©️  Footer    : Rendzz Official® © 2025 - 2026"
+echo "📌 Title     : Rendzz Official Panel"
+echo "=================================="
+echo "🚀 Refresh browser (CTRL+SHIFT+R) buat liat hasil!"

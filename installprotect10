@@ -1,44 +1,91 @@
 #!/bin/bash
 
 # -------------------------------
-# RENDZZ OFFICIAL - PREMIUM PANEL V2
+# RENDZZ OFFICIAL - WALLPAPER MANAGER
 # -------------------------------
 PTERO_DIR="/var/www/pterodactyl"
-WALLPAPER_URL="https://files.catbox.moe/yprqlo.jpg"
+TARGET_FILE="$PTERO_DIR/resources/views/templates/base/core.blade.php"
+BACKUP_FILE="$PTERO_DIR/core.backup"
+WALLPAPER_DIR="$PTERO_DIR/public/rendzz"
+WALLPAPER_FILE="$WALLPAPER_DIR/bg.jpg"
 
-echo ""
-echo "╔══════════════════════════════════════════════════╗"
-echo "║     🔥 RENDZZ OFFICIAL PREMIUM PANEL V2 🔥      ║"
-echo "╚══════════════════════════════════════════════════╝"
-echo ""
+# Function: Hapus wallpaper (kembalikan normal)
+uninstall_wallpaper() {
+    echo ""
+    echo "🗑️  Menghapus wallpaper & mengembalikan panel normal..."
+    
+    # Hapus folder wallpaper
+    if [ -d "$WALLPAPER_DIR" ]; then
+        rm -rf "$WALLPAPER_DIR"
+        echo "✅ Folder wallpaper dihapus"
+    fi
+    
+    # Kembalikan core.blade.php ke default (kosong/inject ulang tanpa CSS)
+    cat > "$TARGET_FILE" << 'EOF'
+@extends('templates/wrapper', [
+    'css' => ['body' => 'bg-neutral-800'],
+])
 
-# -------------------------------
-# 1. BACKUP
-# -------------------------------
-echo "📦 Membuat backup..."
-cp "$PTERO_DIR/resources/views/templates/base/core.blade.php" "$PTERO_DIR/core.bak" 2>/dev/null
-cp "$PTERO_DIR/resources/views/templates/base/footer.blade.php" "$PTERO_DIR/footer.bak" 2>/dev/null
+@section('container')
+    <div id="modal-portal"></div>
+    <div id="app"></div>
+@endsection
+EOF
+    
+    # Clear cache
+    cd "$PTERO_DIR"
+    php artisan view:clear
+    php artisan cache:clear
+    
+    echo "✅ Panel kembali normal (tanpa wallpaper)"
+    echo ""
+}
 
-# -------------------------------
-# 2. DOWNLOAD WALLPAPER
-# -------------------------------
-echo "📥 Download wallpaper..."
-mkdir -p "$PTERO_DIR/public/rendzz"
-curl -L "$WALLPAPER_URL" -o "$PTERO_DIR/public/rendzz/bg.jpg"
-chmod 644 "$PTERO_DIR/public/rendzz/bg.jpg"
-
-# -------------------------------
-# 3. GANTI COPYRIGHT FOOTER
-# -------------------------------
-echo "©️ Ganti copyright footer..."
-sed -i 's/Pterodactyl®/Rendzz Official®/g' "$PTERO_DIR/resources/views/templates/base/footer.blade.php"
-sed -i 's/© [0-9]\{4\} - [0-9]\{4\}/© 2025 - 2026/g' "$PTERO_DIR/resources/views/templates/base/footer.blade.php"
-
-# -------------------------------
-# 4. INJECT CORE BLADE - GLASSMORPHISM EDITION
-# -------------------------------
-echo "🎨 Inject core.blade.php dengan efek premium..."
-cat > "$PTERO_DIR/resources/views/templates/base/core.blade.php" << 'EOF'
+# Function: Install wallpaper baru
+install_wallpaper() {
+    echo ""
+    echo "🖼️  Install wallpaper baru..."
+    
+    # Input URL dari user
+    echo "📸 Masukkan URL wallpaper (direct link gambar):"
+    echo -n "➤ "
+    read WALLPAPER_URL
+    
+    # Validasi URL
+    if [ -z "$WALLPAPER_URL" ]; then
+        echo "❌ URL tidak boleh kosong!"
+        return 1
+    fi
+    
+    if [[ ! "$WALLPAPER_URL" =~ ^https?:// ]]; then
+        echo "❌ URL harus diawali http:// atau https://"
+        return 1
+    fi
+    
+    echo "✅ URL diterima: $WALLPAPER_URL"
+    
+    # Backup dulu
+    cp "$TARGET_FILE" "$BACKUP_FILE" 2>/dev/null
+    
+    # Download wallpaper
+    echo "📥 Downloading wallpaper..."
+    mkdir -p "$WALLPAPER_DIR"
+    curl -L "$WALLPAPER_URL" -o "$WALLPAPER_FILE"
+    
+    if [ ! -f "$WALLPAPER_FILE" ]; then
+        echo "❌ Gagal download wallpaper!"
+        return 1
+    fi
+    
+    chmod 644 "$WALLPAPER_FILE"
+    chown -R www-data:www-data "$WALLPAPER_DIR" 2>/dev/null || \
+    chown -R nginx:nginx "$WALLPAPER_DIR" 2>/dev/null || \
+    chown -R apache:apache "$WALLPAPER_DIR" 2>/dev/null
+    
+    echo "✅ Wallpaper tersimpan"
+    
+    # Inject CSS wallpaper (MURNI BACKGROUND, TIDAK ADA GREETING/ACCESS CONTROL)
+    cat > "$TARGET_FILE" << 'EOF'
 @extends('templates/wrapper', [
     'css' => ['body' => 'bg-neutral-800'],
 ])
@@ -48,218 +95,76 @@ cat > "$PTERO_DIR/resources/views/templates/base/core.blade.php" << 'EOF'
     <div id="app"></div>
 
     <style>
-        /* ======================================= */
-        /*   RENDZZ OFFICIAL - PREMIUM EDITION    */
-        /* ======================================= */
-
-        /* BACKGROUND WALLPAPER */
+        /* RENDZZ OFFICIAL - WALLPAPER ONLY */
         body {
             background: url('/rendzz/bg.jpg') no-repeat center center fixed !important;
             background-size: cover !important;
-            position: relative;
         }
-
-        /* LAPISAN OVERLAY GRADIENT */
-        body::after {
-            content: "";
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 100%);
-            backdrop-filter: blur(4px);
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        /* WATERMARK RENDZZ OFFICIAL */
-        body::before {
-            content: "RENDZZ OFFICIAL";
-            position: fixed;
-            bottom: 20px;
-            right: 30px;
-            color: rgba(255, 255, 255, 0.25);
-            font-size: 14px;
-            font-family: 'Courier New', monospace;
-            font-weight: 600;
-            letter-spacing: 5px;
-            z-index: 9999;
-            text-transform: uppercase;
-            pointer-events: none;
-            text-shadow: 0 0 10px rgba(0,0,0,0.7);
-            transform: rotate(0deg);
-            opacity: 0.7;
-        }
-
-        /* SEMUA KONTEN DI ATAS OVERLAY */
-        #app, #modal-portal, .content-wrapper, .main-sidebar, 
-        .card, .navbar, .footer, .modal-content {
-            position: relative;
-            z-index: 2;
-        }
-
-        /* SIDEBAR - GLASS EFFECT */
-        .main-sidebar {
-            background: rgba(18, 22, 30, 0.75) !important;
-            backdrop-filter: blur(15px) !important;
-            border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
-            box-shadow: 5px 0 25px rgba(0, 0, 0, 0.3) !important;
-        }
-
-        /* NAVBAR - TRANSPARAN */
-        .main-header {
-            background: rgba(32, 36, 45, 0.7) !important;
-            backdrop-filter: blur(12px) !important;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-        }
-
-        /* CARD - GLASSMORPHISM */
-        .card {
-            background: rgba(255, 255, 255, 0.85) !important;
-            backdrop-filter: blur(15px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            border-radius: 12px !important;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15) !important;
-            transition: all 0.3s ease;
-        }
-
-        .card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25) !important;
-            background: rgba(255, 255, 255, 0.95) !important;
-        }
-
-        /* DARK MODE CARD */
-        .dark-mode .card {
-            background: rgba(22, 26, 35, 0.8) !important;
-            backdrop-filter: blur(15px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.05) !important;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3) !important;
-        }
-
-        .dark-mode .card:hover {
-            background: rgba(32, 36, 45, 0.9) !important;
-        }
-
-        /* DARK MODE SIDEBAR */
-        .dark-mode .main-sidebar {
-            background: rgba(10, 12, 18, 0.85) !important;
-            backdrop-filter: blur(15px) !important;
-            border-right: 1px solid rgba(255, 255, 255, 0.03) !important;
-        }
-
-        /* DARK MODE NAVBAR */
-        .dark-mode .main-header {
-            background: rgba(15, 17, 22, 0.8) !important;
-            backdrop-filter: blur(12px) !important;
-        }
-
-        /* BUTTON PREMIUM */
-        .btn {
-            border-radius: 8px !important;
-            transition: all 0.2s ease !important;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-            border: none !important;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
-        }
-
-        .btn-primary:hover {
-            transform: scale(1.02);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
-        }
-
-        /* MODAL GLASS */
-        .modal-content {
-            background: rgba(255, 255, 255, 0.9) !important;
-            backdrop-filter: blur(20px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            border-radius: 16px !important;
-        }
-
-        .dark-mode .modal-content {
-            background: rgba(22, 26, 35, 0.9) !important;
-            border: 1px solid rgba(255, 255, 255, 0.05) !important;
-        }
-
-        /* DROPDOWN GLASS */
-        .dropdown-menu {
-            background: rgba(255, 255, 255, 0.85) !important;
-            backdrop-filter: blur(15px) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
-            border-radius: 10px !important;
-        }
-
-        .dark-mode .dropdown-menu {
-            background: rgba(22, 26, 35, 0.9) !important;
-            border: 1px solid rgba(255, 255, 255, 0.05) !important;
-        }
-
-        /* TABLE GLASS */
-        .table {
-            background: rgba(255, 255, 255, 0.6) !important;
-            backdrop-filter: blur(10px) !important;
-            border-radius: 10px !important;
-        }
-
-        .dark-mode .table {
-            background: rgba(22, 26, 35, 0.6) !important;
-        }
-
-        /* SCROLLBAR CUSTOM */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.1);
+        
+        /* Biar konten tetap kebaca */
+        .content-wrapper, .main-sidebar, .card {
+            background-color: rgba(255, 255, 255, 0.9) !important;
             backdrop-filter: blur(5px);
         }
-
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.5);
+        
+        .dark-mode .content-wrapper, 
+        .dark-mode .main-sidebar, 
+        .dark-mode .card {
+            background-color: rgba(31, 41, 55, 0.9) !important;
+            backdrop-filter: blur(5px);
         }
     </style>
 @endsection
 EOF
+    
+    # Clear cache
+    cd "$PTERO_DIR"
+    php artisan view:clear
+    php artisan cache:clear
+    
+    echo "✅ Wallpaper berhasil diinstall!"
+    echo "🖼️  URL: $WALLPAPER_URL"
+    echo ""
+}
 
 # -------------------------------
-# 5. GANTI TITLE PANEL
+# MAIN MENU
 # -------------------------------
-echo "📝 Ganti title panel..."
-sed -i 's/<title>.*<\/title>/<title>🔥 Rendzz Official Premium Panel 🔥<\/title>/g' "$PTERO_DIR/resources/views/layouts/admin.blade.php" 2>/dev/null
-sed -i 's/<title>.*<\/title>/<title>🔥 Rendzz Official Premium Panel 🔥<\/title>/g' "$PTERO_DIR/resources/views/layouts/auth.blade.php" 2>/dev/null
-
-# -------------------------------
-# 6. CLEAR CACHE
-# -------------------------------
-echo "🧹 Clear cache..."
-cd "$PTERO_DIR"
-php artisan view:clear
-php artisan cache:clear
-
-# -------------------------------
-# 7. FINISH
-# -------------------------------
-echo ""
-echo "╔══════════════════════════════════════════════════╗"
-echo "║     ✅ INSTALLASI PREMIUM BERHASIL! ✅          ║"
-echo "╠══════════════════════════════════════════════════╣"
-echo "║  🖼️  Wallpaper : billiard 98 CM                  ║"
-echo "║  🎨 Efek      : Glassmorphism + Gradient        ║"
-echo "║  💧 Watermark : Rendzz Official                 ║"
-echo "║  ©️ Footer    : Rendzz Official® 2025-2026      ║"
-echo "║  📌 Title     : Rendzz Official Premium Panel   ║"
-echo "╠══════════════════════════════════════════════════╣"
-echo "║  🔥 REFRESH BROWSER (CTRL+SHIFT+R) 🔥          ║"
-echo "╚══════════════════════════════════════════════════╝"
-echo ""
+while true; do
+    clear
+    echo "╔════════════════════════════════════════════╗"
+    echo "║     🔥 RENDZZ WALLPAPER MANAGER 🔥       ║"
+    echo "╠════════════════════════════════════════════╣"
+    echo "║                                            ║"
+    echo "║  [1] 🗑️  HAPUS wallpaper                  ║"
+    echo "║  [2] 🖼️  INSTALL wallpaper baru           ║"
+    echo "║  [x] ❌ KELUAR                           ║"
+    echo "║                                            ║"
+    echo "╚════════════════════════════════════════════╝"
+    echo ""
+    echo -n "Pilih menu [1/2/x]: "
+    read MENU
+    
+    case $MENU in
+        1)
+            uninstall_wallpaper
+            echo ""
+            echo -n "Tekan Enter untuk kembali ke menu..."
+            read
+            ;;
+        2)
+            install_wallpaper
+            echo ""
+            echo -n "Tekan Enter untuk kembali ke menu..."
+            read
+            ;;
+        x)
+            echo "Terima kasih! - Rendzz Official"
+            exit 0
+            ;;
+        *)
+            echo "Pilihan tidak valid!"
+            sleep 1
+            ;;
+    esac
+done

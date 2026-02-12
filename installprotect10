@@ -1,27 +1,35 @@
 #!/bin/bash
 
 # -------------------------------
-# RENDZZ WALLPAPER INSTALLER
+# CONFIG
 # -------------------------------
 PTERO_DIR="/var/www/pterodactyl"
 TARGET_FILE="$PTERO_DIR/resources/views/templates/base/core.blade.php"
+FOOTER_FILE="$PTERO_DIR/resources/views/templates/base/footer.blade.php"
 BACKUP_FILE="${TARGET_FILE}.bak_$(date -u +"%Y-%m-%d-%H-%M-%S")"
-
-# TERIMA PARAMETER DARI TELEGRAM BOT
-WALLPAPER_URL="${1:-https://files.catbox.moe/txg7nh.jpg}"
+BACKUP_FOOTER="${FOOTER_FILE}.bak_$(date -u +"%Y-%m-%d-%H-%M-%S")"
+WALLPAPER_URL="${1:-https://files.catbox.moe/z32ox4.jpg}"
 PUBLIC_WALLPAPER_DIR="$PTERO_DIR/public/rendzz"
 PUBLIC_WALLPAPER_FILE="$PUBLIC_WALLPAPER_DIR/bg.jpg"
 
-echo "🚀 Memulai update Blade + Wallpaper..."
-echo "🖼️ Wallpaper URL: $WALLPAPER_URL"
+echo "🚀 Memulai update Blade + Wallpaper Rendzz Official untuk web panel..."
 
-# Backup
+# -------------------------------
+# Backup Blade
+# -------------------------------
 if [ -f "$TARGET_FILE" ]; then
   cp "$TARGET_FILE" "$BACKUP_FILE"
-  echo "📦 Backup: $BACKUP_FILE"
+  echo "📦 Backup Blade lama dibuat di $BACKUP_FILE"
 fi
 
-# Download wallpaper
+if [ -f "$FOOTER_FILE" ]; then
+  cp "$FOOTER_FILE" "$BACKUP_FOOTER"
+  echo "📦 Backup Footer dibuat di $BACKUP_FOOTER"
+fi
+
+# -------------------------------
+# Download Wallpaper
+# -------------------------------
 echo "📥 Downloading wallpaper..."
 mkdir -p "$PUBLIC_WALLPAPER_DIR"
 curl -L "$WALLPAPER_URL" -o "$PUBLIC_WALLPAPER_FILE"
@@ -32,12 +40,23 @@ if [ ! -f "$PUBLIC_WALLPAPER_FILE" ]; then
 fi
 
 chmod 644 "$PUBLIC_WALLPAPER_FILE"
-chown -R www-data:www-data "$PUBLIC_WALLPAPER_DIR" 2>/dev/null || \
-chown -R nginx:nginx "$PUBLIC_WALLPAPER_DIR" 2>/dev/null || \
-chown -R apache:apache "$PUBLIC_WALLPAPER_DIR" 2>/dev/null
+chown -R www-data:www-data "$PUBLIC_WALLPAPER_DIR" 2>/dev/null || chown -R nginx:nginx "$PUBLIC_WALLPAPER_DIR" 2>/dev/null || chown -R apache:apache "$PUBLIC_WALLPAPER_DIR" 2>/dev/null
 
-# Inject Blade - TANPA HALLO USER & ACCESS CONTROL
-cat > "$TARGET_FILE" << 'ENDOFBLADE'
+echo "✅ Wallpaper tersimpan di: $PUBLIC_WALLPAPER_FILE"
+
+# -------------------------------
+# Ganti Copyright Footer
+# -------------------------------
+if [ -f "$FOOTER_FILE" ]; then
+  sed -i 's/Pterodactyl®/Rendzz Official®/g' "$FOOTER_FILE"
+  sed -i 's/© [0-9]\{4\} - [0-9]\{4\}/© 2025 - 2026/g' "$FOOTER_FILE"
+  echo "✅ Copyright diganti ke Rendzz Official® © 2025 - 2026"
+fi
+
+# -------------------------------
+# Inject Blade + CSS (NO GREETING, NO ACCESS CONTROL)
+# -------------------------------
+cat > "$TARGET_FILE" << 'EOF'
 @extends('templates/wrapper', [
     'css' => ['body' => 'bg-neutral-800'],
 ])
@@ -47,14 +66,18 @@ cat > "$TARGET_FILE" << 'ENDOFBLADE'
     <div id="app"></div>
 
     <style>
+      /* RENDZZ OFFICIAL PANEL WALLPAPER */
       body {
         background: url('/rendzz/bg.jpg') no-repeat center center fixed !important;
         background-size: cover !important;
       }
+      
+      /* Pastikan konten tetap terbaca */
       .content-wrapper, .main-sidebar, .card {
         background-color: rgba(255, 255, 255, 0.9) !important;
         backdrop-filter: blur(5px);
       }
+      
       .dark-mode .content-wrapper, 
       .dark-mode .main-sidebar, 
       .dark-mode .card {
@@ -63,10 +86,18 @@ cat > "$TARGET_FILE" << 'ENDOFBLADE'
       }
     </style>
 @endsection
-ENDOFBLADE
+EOF
 
+# -------------------------------
+# Clear cache
+# -------------------------------
 cd "$PTERO_DIR"
 php artisan view:clear
 php artisan cache:clear
 
-echo "✅ Wallpaper berhasil diinstall: $WALLPAPER_URL"
+echo "✅ Blade + Wallpaper berhasil di-inject!"
+echo "✅ Semua ucapan (greeting) dan access control telah DIHAPUS!"
+echo "✅ Copyright footer diganti: Rendzz Official® © 2025 - 2026"
+echo "📁 Wallpaper path: /rendzz/bg.jpg"
+echo "🔍 Cek akses: curl -I http://$(hostname -I | awk '{print $1}')/rendzz/bg.jpg"
+echo "🎉 Semua update selesai. Refresh browser (CTRL+SHIFT+R) untuk melihat hasil."
